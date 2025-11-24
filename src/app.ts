@@ -16,7 +16,7 @@ export const createApp = () => {
   app.use('/services', servicesRouter);
   app.use('/deploys', deploysRouter);
 
-  app.use((err: Error, _req: express.Request, res: express.Response) => {
+  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     res.status(500).json({ ok: false, error: err.message });
   });
 
