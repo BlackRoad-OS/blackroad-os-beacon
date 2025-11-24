@@ -1,0 +1,31 @@
+name: beacon-ci
+
+on:
+  push:
+    branches: ["main", "feat/beacon-sig-service"]
+  pull_request:
+    branches: ["main", "feat/beacon-sig-service"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Validate SIG schemas
+        run: npm run validate:sig
