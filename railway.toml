@@ -1,12 +1,27 @@
 [build]
 builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 numReplicas = 1
-startCommand = "node dist/server.js"
+startCommand = "node dist/app.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
 
 [variables]
 NODE_ENV = "production"
 PORT = "8080"
+BEACON_SERVICES_CONFIG_PATH = "./config/services.yaml"
+DEPLOY_LOG_PATH = "./data/deploy-log.jsonl"
+
+[[services]]
+name = "blackroad-os-beacon"
+internalPort = 8080
+protocol = "TCP"
+
+[services.healthcheck]
+path = "/health"
+interval = "10s"
+timeout = "5s"

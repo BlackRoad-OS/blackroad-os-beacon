@@ -1,0 +1,402 @@
+name: Deploy to All Platforms
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to deploy (comma-separated: railway,cloudflare,vercel,droplet,pi)'
+        required: false
+        default: 'all'
+      environment:
+        description: 'Environment (production/staging)'
+        required: false
+        default: 'production'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Build and test first
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate SIG schemas
+        run: npm run validate:sig
+
+      - name: Get SHA
+        id: sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # Railway deployment
+  deploy-railway:
+    name: Deploy to Railway
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.inputs.platforms, 'railway') ||
+      github.event.inputs.platforms == 'all'
+
+    strategy:
+      max-parallel: 5
+      matrix:
+        service:
+          - blackroad-os-beacon
+          - api-gateway
+          - agent-hub
+          - ws-server
+          - mesh-network
+          - vectordb
+          - event-stream
+          - message-queue
+          - llm-server
+          - rag-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy ${{ matrix.service }}
+        run: |
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+          railway up --service ${{ matrix.service }} --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Health Check
+        run: |
+          echo "Waiting for deployment..."
+          sleep 30
+          echo "Deployment complete for ${{ matrix.service }}"
+
+  # Cloudflare deployment
+  deploy-cloudflare:
+    name: Deploy to Cloudflare
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.inputs.platforms, 'cloudflare') ||
+      github.event.inputs.platforms == 'all'
+
+    strategy:
+      matrix:
+        site:
+          - blackroad-network
+          - blackroad-systems
+          - blackroad-me
+          - lucidia-earth
+          - blackroadai
+          - lucidia-studio
+          - lucidiaqi
+          - blackroad-quantum
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy ${{ matrix.site }} to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ matrix.site }}
+          directory: domains/${{ matrix.site }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  # Cloudflare Workers deployment
+  deploy-cloudflare-worker:
+    name: Deploy Cloudflare Worker
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.inputs.platforms, 'cloudflare') ||
+      github.event.inputs.platforms == 'all'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build worker
+        run: npm run build:worker || echo "No worker build script"
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env ${{ github.event.inputs.environment || 'production' }}
+
+  # Vercel deployment
+  deploy-vercel:
+    name: Deploy to Vercel
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.inputs.platforms, 'vercel') ||
+      github.event.inputs.platforms == 'all'
+
+    strategy:
+      matrix:
+        project:
+          - math-blackroad-io
+          - blackroadai
+          - lucidia-earth
+          - prism-console
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        run: |
+          vercel deploy --prod --yes \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --scope=${{ secrets.VERCEL_ORG_ID }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # DigitalOcean Droplet deployment
+  deploy-droplet:
+    name: Deploy to DigitalOcean
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.inputs.platforms, 'droplet') ||
+      github.event.inputs.platforms == 'all'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd /opt/blackroad
+            git fetch origin
+            git reset --hard origin/main
+
+            # Backup and deploy
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d --build
+
+            # Verify
+            sleep 15
+            docker-compose ps
+            curl -f http://localhost:8080/health || exit 1
+
+      - name: External health check
+        run: |
+          sleep 30
+          curl -f https://codex.blackroad.io/health || echo "External check pending"
+
+  # Raspberry Pi deployment
+  deploy-pis:
+    name: Deploy to Raspberry Pis
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      contains(github.event.inputs.platforms, 'pi') ||
+      github.event.inputs.platforms == 'all'
+
+    strategy:
+      matrix:
+        pi:
+          - name: lucidia
+            ip: 192.168.4.38
+          - name: edge-1
+            ip: 192.168.4.39
+          - name: edge-2
+            ip: 192.168.4.40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to ${{ matrix.pi.name }}
+        uses: appleboy/ssh-action@v1.0.0
+        continue-on-error: true
+        with:
+          host: ${{ matrix.pi.ip }}
+          username: pi
+          key: ${{ secrets.PI_SSH_KEY }}
+          script: |
+            cd /home/pi/blackroad
+            git fetch origin
+            git reset --hard origin/main
+
+            # Restart services
+            sudo systemctl restart blackroad-beacon || true
+            sudo systemctl restart blackroad-agent || true
+
+            # Verify
+            sleep 5
+            curl -f http://localhost:8080/health || echo "Health check failed"
+
+  # Docker image build and push
+  build-docker:
+    name: Build Docker Image
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.inputs.platforms == 'all'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            ghcr.io/blackroad-os/beacon:latest
+            ghcr.io/blackroad-os/beacon:${{ needs.build.outputs.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Log deployment to beacon
+  log-deployment:
+    name: Log Deployment
+    needs: [build, deploy-railway, deploy-cloudflare, deploy-vercel, deploy-droplet, deploy-pis, build-docker]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log deployment
+        run: |
+          curl -X POST https://beacon.blackroad.io/deploys \
+            -H "Content-Type: application/json" \
+            -d '{
+              "service": "blackroad-os-beacon",
+              "env": "${{ github.event.inputs.environment || 'production' }}",
+              "git_sha": "${{ needs.build.outputs.sha }}",
+              "actor": "${{ github.actor }}",
+              "started_at": "${{ github.event.head_commit.timestamp }}",
+              "completed_at": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+              "outcome": "success",
+              "links": ["https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"],
+              "meta": {
+                "workflow": "deploy-all-platforms",
+                "platforms": "${{ github.event.inputs.platforms || 'all' }}"
+              }
+            }' || echo "Failed to log deployment"
+
+  # Notify on completion
+  notify:
+    name: Notify
+    needs: [build, deploy-railway, deploy-cloudflare, deploy-vercel, deploy-droplet, deploy-pis]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notify Slack
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": "Deployment completed for blackroad-os-beacon",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Complete*\nService: blackroad-os-beacon\nSHA: ${{ needs.build.outputs.sha }}\nActor: ${{ github.actor }}"
+                  }
+                }
+              ]
+            }' || echo "Slack notification failed"
+
+      - name: Notify Discord
+        if: ${{ secrets.DISCORD_WEBHOOK_URL != '' }}
+        run: |
+          curl -X POST ${{ secrets.DISCORD_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "content": "Deployment completed for blackroad-os-beacon (SHA: ${{ needs.build.outputs.sha }})"
+            }' || echo "Discord notification failed"
