@@ -1,0 +1,210 @@
+name: Sync Third-Party Integrations
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      integration:
+        description: 'Integration to sync (all, notion, asana, huggingface)'
+        required: false
+        default: 'all'
+
+jobs:
+  # Sync service status to Notion
+  sync-notion:
+    name: Sync to Notion
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.integration == 'all' ||
+      github.event.inputs.integration == 'notion'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get beacon status
+        id: beacon
+        run: |
+          STATUS=$(curl -s https://beacon.blackroad.io/beacon)
+          echo "status<<EOF" >> $GITHUB_OUTPUT
+          echo "$STATUS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Sync services to Notion
+        if: ${{ secrets.NOTION_API_KEY != '' }}
+        run: |
+          # Sync each service status to Notion database
+          echo '${{ steps.beacon.outputs.status }}' | jq -c '.services[]' | while read service; do
+            SERVICE_NAME=$(echo $service | jq -r '.service')
+            STATUS=$(echo $service | jq -r '.status')
+            LATENCY=$(echo $service | jq -r '.latency_ms // "N/A"')
+
+            curl -X POST https://api.notion.com/v1/pages \
+              -H "Authorization: Bearer ${{ secrets.NOTION_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              -H "Notion-Version: 2022-06-28" \
+              -d '{
+                "parent": {"database_id": "${{ secrets.NOTION_SERVICES_DB_ID }}"},
+                "properties": {
+                  "Name": {"title": [{"text": {"content": "'$SERVICE_NAME'"}}]},
+                  "Status": {"select": {"name": "'$STATUS'"}},
+                  "Last Checked": {"date": {"start": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}}
+                }
+              }' || echo "Failed to sync $SERVICE_NAME"
+          done
+
+  # Sync deploys to Asana
+  sync-asana:
+    name: Sync to Asana
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.integration == 'all' ||
+      github.event.inputs.integration == 'asana'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get recent deploys
+        id: deploys
+        run: |
+          DEPLOYS=$(curl -s "https://beacon.blackroad.io/deploys?limit=10")
+          echo "deploys<<EOF" >> $GITHUB_OUTPUT
+          echo "$DEPLOYS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Asana tasks for failed deploys
+        if: ${{ secrets.ASANA_ACCESS_TOKEN != '' }}
+        run: |
+          echo '${{ steps.deploys.outputs.deploys }}' | jq -c '.deploys[] | select(.outcome == "failed")' | while read deploy; do
+            SERVICE=$(echo $deploy | jq -r '.service')
+            ENV=$(echo $deploy | jq -r '.env')
+            SHA=$(echo $deploy | jq -r '.git_sha')
+
+            curl -X POST https://app.asana.com/api/1.0/tasks \
+              -H "Authorization: Bearer ${{ secrets.ASANA_ACCESS_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "data": {
+                  "workspace": "${{ secrets.ASANA_WORKSPACE_GID }}",
+                  "projects": ["${{ secrets.ASANA_OPS_PROJECT_GID }}"],
+                  "name": "Failed deployment: '$SERVICE' ('$ENV')",
+                  "notes": "Deployment failed for '$SERVICE' in '$ENV' environment.\nCommit: '$SHA'\nPlease investigate and redeploy.",
+                  "due_on": "'$(date -d "+1 day" +%Y-%m-%d)'"
+                }
+              }' || echo "Failed to create Asana task for $SERVICE"
+          done
+
+  # Sync models from Hugging Face
+  sync-huggingface:
+    name: Sync Hugging Face Models
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.integration == 'all' ||
+      github.event.inputs.integration == 'huggingface'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check model availability
+        if: ${{ secrets.HUGGINGFACE_TOKEN != '' }}
+        run: |
+          MODELS=(
+            "blackroad-os/llama-3.1-70b-instruct-safe"
+            "blackroad-os/mistral-7b-instruct-safe"
+            "blackroad-os/qwen2.5-72b-instruct-safe"
+            "blackroad-os/bge-large-en-safe"
+            "blackroad-os/codellama-34b-safe"
+          )
+
+          for model in "${MODELS[@]}"; do
+            echo "Checking model: $model"
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer ${{ secrets.HUGGINGFACE_TOKEN }}" \
+              "https://huggingface.co/api/models/$model")
+
+            if [ "$STATUS" == "200" ]; then
+              echo "  Model exists"
+            else
+              echo "  Model not found or error (HTTP $STATUS)"
+            fi
+          done
+
+  # Verify Clerk auth configuration
+  verify-clerk:
+    name: Verify Clerk Auth
+    runs-on: ubuntu-latest
+    if: ${{ secrets.CLERK_SECRET_KEY != '' }}
+
+    steps:
+      - name: Check Clerk API
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CLERK_SECRET_KEY }}" \
+            "https://api.clerk.com/v1/users?limit=1")
+
+          if [ "$STATUS" == "200" ]; then
+            echo "Clerk API connection successful"
+          else
+            echo "Clerk API check failed (HTTP $STATUS)"
+            exit 1
+          fi
+
+  # Verify Stripe configuration
+  verify-stripe:
+    name: Verify Stripe Config
+    runs-on: ubuntu-latest
+    if: ${{ secrets.STRIPE_SECRET_KEY != '' }}
+
+    steps:
+      - name: Check Stripe API
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -u "${{ secrets.STRIPE_SECRET_KEY }}:" \
+            "https://api.stripe.com/v1/products?limit=1")
+
+          if [ "$STATUS" == "200" ]; then
+            echo "Stripe API connection successful"
+          else
+            echo "Stripe API check failed (HTTP $STATUS)"
+            exit 1
+          fi
+
+  # Report results
+  report:
+    name: Integration Report
+    needs: [sync-notion, sync-asana, sync-huggingface, verify-clerk, verify-stripe]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate report
+        run: |
+          echo "Integration Sync Report"
+          echo "======================="
+          echo "Notion: ${{ needs.sync-notion.result }}"
+          echo "Asana: ${{ needs.sync-asana.result }}"
+          echo "Hugging Face: ${{ needs.sync-huggingface.result }}"
+          echo "Clerk: ${{ needs.verify-clerk.result }}"
+          echo "Stripe: ${{ needs.verify-stripe.result }}"
+
+      - name: Notify on failures
+        if: contains(needs.*.result, 'failure')
+        run: |
+          echo "Some integrations failed - check workflow logs"
+
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+              -H "Content-Type: application/json" \
+              -d '{"text": "Integration sync had failures. Check GitHub Actions."}' || true
+          fi

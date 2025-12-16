@@ -1,0 +1,396 @@
+# BlackRoad OS Beacon - Services Registry
+# Comprehensive service health monitoring configuration
+
+services:
+  # ===================
+  # CORE SERVICES
+  # ===================
+
+  - id: blackroad-os-web
+    name: Web Front Door
+    env: prod
+    health_url: "https://web.blackroad.io/health"
+    region: "us-central"
+    platform: cloudflare
+    type: frontend
+    criticality: high
+
+  - id: blackroad-os-prism-console
+    name: Prism Console
+    env: prod
+    health_url: "https://prism.blackroad.io/api/health"
+    region: "us-central"
+    platform: vercel
+    type: frontend
+    criticality: high
+
+  - id: blackroad-os-api
+    name: Public API
+    env: prod
+    health_url: "https://api.blackroad.io/v1/health"
+    region: "us-central"
+    platform: railway
+    type: api
+    criticality: critical
+
+  - id: blackroad-os-beacon
+    name: Beacon Service
+    env: prod
+    health_url: "https://beacon.blackroad.io/health"
+    region: "us-central"
+    platform: railway
+    type: monitoring
+    criticality: critical
+
+  # ===================
+  # RAILWAY SERVICES
+  # ===================
+
+  - id: api-gateway
+    name: API Gateway
+    env: prod
+    health_url: "https://api-gateway.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: api
+    criticality: critical
+
+  - id: agent-hub
+    name: Agent Hub
+    env: prod
+    health_url: "https://agent-hub.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: service
+    criticality: high
+
+  - id: ws-server
+    name: WebSocket Server
+    env: prod
+    health_url: "https://ws-server.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: realtime
+    criticality: high
+
+  - id: mesh-network
+    name: Mesh Network
+    env: prod
+    health_url: "https://mesh-network.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: networking
+    criticality: high
+
+  - id: vectordb
+    name: Vector Database
+    env: prod
+    health_url: "https://vectordb.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: database
+    criticality: critical
+
+  - id: event-stream
+    name: Event Stream
+    env: prod
+    health_url: "https://event-stream.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: messaging
+    criticality: high
+
+  - id: message-queue
+    name: Message Queue
+    env: prod
+    health_url: "https://message-queue.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: messaging
+    criticality: high
+
+  - id: tsdb
+    name: Time Series Database
+    env: prod
+    health_url: "https://tsdb.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: database
+    criticality: high
+
+  - id: llm-server
+    name: LLM Server
+    env: prod
+    health_url: "https://llm-server.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: ai
+    criticality: high
+
+  - id: ml-pipeline
+    name: ML Pipeline
+    env: prod
+    health_url: "https://ml-pipeline.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: ai
+    criticality: medium
+
+  - id: rag-service
+    name: RAG Service
+    env: prod
+    health_url: "https://rag-service.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: ai
+    criticality: high
+
+  - id: model-forge
+    name: Model Forge
+    env: prod
+    health_url: "https://model-forge.up.railway.app/health"
+    region: "us-west1"
+    platform: railway
+    type: ai
+    criticality: medium
+
+  # ===================
+  # CLOUDFLARE PAGES
+  # ===================
+
+  - id: blackroad-network
+    name: BlackRoad Network
+    env: prod
+    health_url: "https://blackroad.network/health"
+    region: "global"
+    platform: cloudflare
+    type: frontend
+    criticality: medium
+
+  - id: blackroad-systems
+    name: BlackRoad Systems
+    env: prod
+    health_url: "https://blackroad.systems/health"
+    region: "global"
+    platform: cloudflare
+    type: frontend
+    criticality: medium
+
+  - id: lucidia-earth
+    name: Lucidia Earth
+    env: prod
+    health_url: "https://lucidia.earth/health"
+    region: "global"
+    platform: cloudflare
+    type: frontend
+    criticality: medium
+
+  - id: blackroadai
+    name: BlackRoad AI
+    env: prod
+    health_url: "https://blackroad.ai/health"
+    region: "global"
+    platform: cloudflare
+    type: frontend
+    criticality: high
+
+  - id: lucidiaqi
+    name: Lucidia Qi
+    env: prod
+    health_url: "https://lucidia.qi/health"
+    region: "global"
+    platform: cloudflare
+    type: frontend
+    criticality: medium
+
+  - id: blackroad-quantum
+    name: BlackRoad Quantum
+    env: prod
+    health_url: "https://blackroad.quantum/health"
+    region: "global"
+    platform: cloudflare
+    type: frontend
+    criticality: low
+
+  # ===================
+  # VERCEL SERVICES
+  # ===================
+
+  - id: math-blackroad-io
+    name: Math Portal
+    env: prod
+    health_url: "https://math.blackroad.io/api/health"
+    region: "iad1"
+    platform: vercel
+    type: frontend
+    criticality: medium
+
+  # ===================
+  # DIGITALOCEAN
+  # ===================
+
+  - id: codex-primary
+    name: Codex Primary
+    env: prod
+    health_url: "https://codex.blackroad.io/health"
+    region: "nyc1"
+    platform: digitalocean
+    type: service
+    criticality: high
+
+  - id: codex-backup
+    name: Codex Backup
+    env: prod
+    health_url: "https://codex-backup.blackroad.io/health"
+    region: "sfo3"
+    platform: digitalocean
+    type: service
+    criticality: medium
+
+  # ===================
+  # RASPBERRY PI FLEET
+  # ===================
+
+  - id: pi-lucidia
+    name: Lucidia Pi
+    env: edge
+    health_url: "http://192.168.4.38:8080/health"
+    region: "local"
+    platform: raspberry_pi
+    type: edge
+    criticality: medium
+
+  - id: pi-edge-1
+    name: Edge Node 1
+    env: edge
+    health_url: "http://192.168.4.39:8080/health"
+    region: "local"
+    platform: raspberry_pi
+    type: edge
+    criticality: low
+
+  - id: pi-edge-2
+    name: Edge Node 2
+    env: edge
+    health_url: "http://192.168.4.40:8080/health"
+    region: "local"
+    platform: raspberry_pi
+    type: edge
+    criticality: low
+
+  # ===================
+  # AI/ML SERVICES
+  # ===================
+
+  - id: huggingface-inference
+    name: Hugging Face Inference
+    env: prod
+    health_url: "https://api-inference.huggingface.co/health"
+    region: "global"
+    platform: huggingface
+    type: ai
+    criticality: high
+
+  - id: ollama-local
+    name: Ollama Local
+    env: dev
+    health_url: "http://localhost:11434/api/tags"
+    region: "local"
+    platform: local
+    type: ai
+    criticality: medium
+
+  - id: vllm-server
+    name: vLLM Server
+    env: prod
+    health_url: "https://vllm.blackroad.io/health"
+    region: "us-west1"
+    platform: railway
+    type: ai
+    criticality: high
+
+  # ===================
+  # THIRD-PARTY SERVICES
+  # ===================
+
+  - id: clerk-auth
+    name: Clerk Auth
+    env: prod
+    health_url: "https://api.clerk.com/health"
+    region: "global"
+    platform: clerk
+    type: auth
+    criticality: critical
+
+  - id: stripe-api
+    name: Stripe API
+    env: prod
+    health_url: "https://api.stripe.com/v1/health"
+    region: "global"
+    platform: stripe
+    type: billing
+    criticality: critical
+
+  - id: notion-api
+    name: Notion API
+    env: prod
+    health_url: "https://api.notion.com/v1/health"
+    region: "global"
+    platform: notion
+    type: productivity
+    criticality: medium
+
+  - id: asana-api
+    name: Asana API
+    env: prod
+    health_url: "https://app.asana.com/api/1.0/health"
+    region: "global"
+    platform: asana
+    type: productivity
+    criticality: medium
+
+  # ===================
+  # MONITORING
+  # ===================
+
+  - id: prometheus
+    name: Prometheus
+    env: prod
+    health_url: "https://metrics.blackroad.io/-/healthy"
+    region: "us-central"
+    platform: docker
+    type: monitoring
+    criticality: high
+
+  - id: grafana
+    name: Grafana
+    env: prod
+    health_url: "https://monitoring.blackroad.io/api/health"
+    region: "us-central"
+    platform: docker
+    type: monitoring
+    criticality: high
+
+# Alerting configuration
+alerting:
+  enabled: true
+  channels:
+    - type: slack
+      webhook: "${SLACK_WEBHOOK_URL}"
+      channel: "#alerts"
+    - type: discord
+      webhook: "${DISCORD_WEBHOOK_URL}"
+      channel: "alerts"
+    - type: email
+      recipients:
+        - "ops@blackroad.io"
+  thresholds:
+    unhealthy_count: 3
+    latency_ms: 5000
+
+# Health check configuration
+health_check:
+  interval_seconds: 60
+  timeout_seconds: 10
+  retry_count: 3
+  parallel_checks: 10
