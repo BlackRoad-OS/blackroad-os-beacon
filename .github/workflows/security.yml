@@ -181,11 +181,11 @@ jobs:
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### Top Issues" >> $GITHUB_STEP_SUMMARY
               cat bandit-report.json | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-for r in d.get('results', [])[:10]:
-    print(f\"- **{r['issue_severity']}**: {r['issue_text']} ({r['filename']}:{r['line_number']})\")
-" >> $GITHUB_STEP_SUMMARY
+              import json, sys
+              d = json.load(sys.stdin)
+              for r in d.get('results', [])[:10]:
+                  print(f\"- **{r['issue_severity']}**: {r['issue_text']} ({r['filename']}:{r['line_number']})\")
+              " >> $GITHUB_STEP_SUMMARY
             fi
           fi
         continue-on-error: true
