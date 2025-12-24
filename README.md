@@ -1,5 +1,7 @@
 # blackroad-os-beacon
 
+🚦 **Trinity Status:** ✅ Fully Compliant (GreenLight · YellowLight · RedLight)
+
 Beacon is the centralized health and deploy-log service for BlackRoad OS. It collects standardized SIG beacons from every configured service and stores recent deploy events for quick debugging and dashboards.
 
 ## Features
@@ -48,11 +50,23 @@ curl "http://localhost:8080/deploys?service=blackroad-os-web&limit=5"
 - **blackroad-os-web**: can visualize beacons for dashboards
 - **blackroad-os-operator**: can append deploy records and trigger checks
 
+## 🌈 Trinity Integration
+This repository is fully integrated with the BlackRoad OS Light Trinity system:
+- **🟢 GreenLight**: 103 project management templates for event logging
+- **🟡 YellowLight**: Infrastructure automation and Codex integration
+- **🔴 RedLight**: 23 brand templates for visual consistency
+
+See [`docs/TRINITY_INTEGRATION.md`](docs/TRINITY_INTEGRATION.md) for complete Trinity usage guide.
+
 ## Service layout
 - `/src` application code (Express)
 - `/schemas` SIG specs for validation
 - `/config` example service registry
 - `/scripts` validation helpers
 - `/tests` Vitest coverage for logic and HTTP routes
+- `/.trinity` Light Trinity system (GreenLight, YellowLight, RedLight)
 
-For a conceptual overview, see [`docs/BEACON_OVERVIEW.md`](docs/BEACON_OVERVIEW.md).
+## Documentation
+- [`docs/BEACON_OVERVIEW.md`](docs/BEACON_OVERVIEW.md) - Conceptual overview
+- [`docs/TRINITY_INTEGRATION.md`](docs/TRINITY_INTEGRATION.md) - Trinity system integration guide
+- [`.trinity/README.md`](.trinity/README.md) - Complete Trinity documentation
