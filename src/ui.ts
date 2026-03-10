@@ -206,12 +206,13 @@ export const landingHtml = `<!doctype html>
           for (const svc of data.services) beaconMap[svc.service] = svc;
         }
         const grid = document.getElementById('status-grid');
+        const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         grid.innerHTML = CORE.map(svc => {
           const b = beaconMap[svc.id];
           const ok = b?.status === 'healthy';
           const badge = b ? (ok ? 'badge-ok' : 'badge-err') : 'badge-err';
           const label = b ? (ok ? 'Healthy' : 'Unhealthy') : 'Unreachable';
-          return \`<div class="status-item"><div class="status-item-icon">\${svc.icon}</div><div class="status-item-name">\${svc.name}</div><span class="status-item-badge \${badge}">\${label}</span></div>\`;
+          return \`<div class="status-item"><div class="status-item-icon">\${esc(svc.icon)}</div><div class="status-item-name">\${esc(svc.name)}</div><span class="status-item-badge \${badge}">\${label}</span></div>\`;
         }).join('');
       } catch (_) { /* leave as loading */ }
     })();
@@ -321,6 +322,7 @@ export const statusHtml = `<!doctype html>
     }
 
     function render(data) {
+      const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       const svcs = Array.isArray(data.services) ? data.services : [];
       const ok = svcs.filter(s => s.status === 'healthy').length;
       const total = svcs.length;
@@ -349,12 +351,12 @@ export const statusHtml = `<!doctype html>
       document.getElementById('grid').innerHTML = svcs.map(s => {
         const healthy = s.status === 'healthy';
         const errHtml = (!healthy && s.meta && s.meta.error)
-          ? \`<div class="card-error">\${s.meta.error}</div>\` : '';
+          ? \`<div class="card-error">\${esc(s.meta.error)}</div>\` : '';
         return \`<div class="card \${healthy ? 'ok' : 'err'}">
-          <div class="card-header"><div class="card-name">\${s.service}</div>
+          <div class="card-header"><div class="card-name">\${esc(s.service)}</div>
           <span class="pill \${healthy ? 'pill-ok' : 'pill-err'}">\${healthy ? 'Healthy' : 'Unhealthy'}</span></div>
-          <div class="card-meta">env: \${s.env} · v\${s.version}</div>
-          <div class="card-url">\${s.url}</div>\${errHtml}</div>\`;
+          <div class="card-meta">env: \${esc(s.env)} · v\${esc(s.version)}</div>
+          <div class="card-url">\${esc(s.url)}</div>\${errHtml}</div>\`;
       }).join('');
     }
 
