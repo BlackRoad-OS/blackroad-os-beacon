@@ -1,7 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import Ajv from 'ajv';
+import { fileURLToPath } from 'url';
+import Ajv, { type ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface DeployRecord {
   service: string;
@@ -54,7 +58,7 @@ export function appendDeployRecord(record: DeployRecord, logPath = defaultLogPat
 
   const valid = validateDeploy(record);
   if (!valid) {
-    const errors = validator.errors?.map((err) => `${err.instancePath} ${err.message}`).join(', ');
+    const errors = validator.errors?.map((err: ErrorObject) => `${err.instancePath} ${err.message}`).join(', ');
     throw new Error(`Deploy record validation failed: ${errors}`);
   }
 

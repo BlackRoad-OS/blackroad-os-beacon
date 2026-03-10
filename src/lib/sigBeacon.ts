@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { ServiceConfig, getServices } from './servicesRegistry';
 
 export type BeaconStatus = 'healthy' | 'unhealthy';
@@ -25,8 +24,12 @@ const defaultAgentId = 'blackroad-os-beacon';
 async function performHealthCheck(service: ServiceConfig): Promise<{ ok: boolean; version?: string; meta?: Record<string, unknown> }>
 {
   try {
-    const response = await axios.get(service.health_url, { timeout: 5000 });
-    return response.data;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch(service.health_url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    const data = await response.json() as { ok: boolean; version?: string; meta?: Record<string, unknown> };
+    return data;
   } catch (error) {
     return { ok: false, meta: { error: error instanceof Error ? error.message : 'unknown error' } };
   }

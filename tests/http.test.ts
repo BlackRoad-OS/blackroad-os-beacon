@@ -1,16 +1,15 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import request from 'supertest';
 import { describe, it, beforeEach, vi, expect } from 'vitest';
-import axios from 'axios';
 import { createApp } from '../src/app';
 import { clearServicesCache } from '../src/lib/servicesRegistry';
 
-vi.mock('axios');
-const mockedAxios = axios as unknown as { get: ReturnType<typeof vi.fn> };
+// Mock native fetch used by sigBeacon
+vi.stubGlobal('fetch', vi.fn());
+const mockedFetch = fetch as unknown as ReturnType<typeof vi.fn>;
 
-describe('HTTP routes', () => {
+describe('HTTP routes (Hono)', () => {
   let configPath: string;
   let logPath: string;
 
@@ -29,17 +28,22 @@ describe('HTTP routes', () => {
 
   it('responds to /health', async () => {
     const app = createApp();
-    const res = await request(app).get('/health');
+    const res = await app.request('/health');
     expect(res.status).toBe(200);
-    expect(res.body.service).toBe('blackroad-os-beacon');
+    const body = await res.json();
+    expect(body.service).toBe('blackroad-os-beacon');
+    expect(body.ok).toBe(true);
   });
 
   it('returns beacon data', async () => {
-    mockedAxios.get = vi.fn().mockResolvedValueOnce({ data: { ok: true, version: '9.9.9' } });
+    mockedFetch.mockResolvedValueOnce({
+      json: async () => ({ ok: true, version: '9.9.9' }),
+    });
     const app = createApp();
-    const res = await request(app).get('/beacon');
+    const res = await app.request('/beacon');
     expect(res.status).toBe(200);
-    expect(res.body.services[0].status).toBe('healthy');
+    const body = await res.json();
+    expect(body.services[0].status).toBe('healthy');
   });
 
   it('accepts deploy POST and returns in query', async () => {
@@ -55,12 +59,36 @@ describe('HTTP routes', () => {
       links: ['https://example.com/pr/1'],
     };
 
-    const postRes = await request(app).post('/deploys').send(payload);
+    const postRes = await app.request('/deploys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
     expect(postRes.status).toBe(200);
 
-    const getRes = await request(app).get('/deploys').query({ service: 'svc-http', limit: 1 });
+    const getRes = await app.request('/deploys?service=svc-http&limit=1');
     expect(getRes.status).toBe(200);
-    expect(getRes.body.deploys).toHaveLength(1);
-    expect(getRes.body.deploys[0].service).toBe('svc-http');
+    const body = await getRes.json();
+    expect(body.deploys).toHaveLength(1);
+    expect(body.deploys[0].service).toBe('svc-http');
+  });
+
+  it('serves HTML at /', async () => {
+    const app = createApp();
+    const res = await app.request('/');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const text = await res.text();
+    expect(text).toContain('BlackRoad OS Beacon');
+    expect(text).toContain('blackroad.io');
+  });
+
+  it('serves HTML at /status', async () => {
+    const app = createApp();
+    const res = await app.request('/status');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const text = await res.text();
+    expect(text).toContain('System Status');
   });
 });

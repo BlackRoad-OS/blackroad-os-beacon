@@ -2,14 +2,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import axios from 'axios';
 import { clearServicesCache } from '../src/lib/servicesRegistry';
 
-vi.mock('axios');
-
-const mockedAxios = axios as unknown as {
-  get: ReturnType<typeof vi.fn>;
-};
+// Mock native fetch used by sigBeacon
+vi.stubGlobal('fetch', vi.fn());
+const mockedFetch = fetch as unknown as ReturnType<typeof vi.fn>;
 
 function createTempConfig(services: unknown): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'beacon-config-'));
@@ -36,8 +33,8 @@ describe('sigBeacon', () => {
   });
 
   it('collectServiceBeacon maps healthy response', async () => {
-    mockedAxios.get = vi.fn().mockResolvedValueOnce({
-      data: { ok: true, version: '1.2.3', meta: { extra: 'info' } },
+    mockedFetch.mockResolvedValueOnce({
+      json: async () => ({ ok: true, version: '1.2.3', meta: { extra: 'info' } }),
     });
     const { collectServiceBeacon } = await import('../src/lib/sigBeacon');
     const beacon = await collectServiceBeacon({
@@ -55,9 +52,8 @@ describe('sigBeacon', () => {
   });
 
   it('collectAllBeacons returns all services and marks unhealthy on failure', async () => {
-    mockedAxios.get = vi
-      .fn()
-      .mockResolvedValueOnce({ data: { ok: true, version: '2.0.0' } })
+    mockedFetch
+      .mockResolvedValueOnce({ json: async () => ({ ok: true, version: '2.0.0' }) })
       .mockRejectedValueOnce(new Error('timeout'));
 
     const { collectAllBeacons } = await import('../src/lib/sigBeacon');
