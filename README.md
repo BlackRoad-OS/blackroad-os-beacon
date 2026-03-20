@@ -56,3 +56,13 @@ curl "http://localhost:8080/deploys?service=blackroad-os-web&limit=5"
 - `/tests` Vitest coverage for logic and HTTP routes
 
 For a conceptual overview, see [`docs/BEACON_OVERVIEW.md`](docs/BEACON_OVERVIEW.md).
+
+---
+
+**Proprietary Software — BlackRoad OS, Inc.**
+
+This software is proprietary to BlackRoad OS, Inc. Source code is publicly visible for transparency and collaboration. Commercial use, forking, and redistribution are prohibited without written authorization.
+
+**BlackRoad OS — Pave Tomorrow.**
+
+*Copyright 2024-2026 BlackRoad OS, Inc. All Rights Reserved.*
