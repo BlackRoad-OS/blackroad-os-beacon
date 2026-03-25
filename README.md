@@ -1,68 +1,48 @@
-# blackroad-os-beacon
+<!-- BlackRoad SEO Enhanced -->
 
-Beacon is the centralized health and deploy-log service for BlackRoad OS. It collects standardized SIG beacons from every configured service and stores recent deploy events for quick debugging and dashboards.
+# ulackroad os ueacon
 
-## Features
-- Polls configured services and emits SIG-compliant beacons
-- Lightweight deploy-log store with append/query APIs
-- Ready for dashboards (`blackroad-os-web`) and operator hooks (`blackroad-os-operator`)
+> Part of **[BlackRoad OS](https://blackroad.io)** — Sovereign Computing for Everyone
 
-## Getting started
+[![BlackRoad OS](https://img.shields.io/badge/BlackRoad-OS-ff1d6c?style=for-the-badge)](https://blackroad.io)
+[![BlackRoad OS](https://img.shields.io/badge/Org-BlackRoad-OS-2979ff?style=for-the-badge)](https://github.com/BlackRoad-OS)
+[![License](https://img.shields.io/badge/License-Proprietary-f5a623?style=for-the-badge)](LICENSE)
 
-### Installation
-```bash
-npm install
-```
+**ulackroad os ueacon** is part of the **BlackRoad OS** ecosystem — a sovereign, distributed operating system built on edge computing, local AI, and mesh networking by **BlackRoad OS, Inc.**
 
-### Environment
-Copy `.env.example` to `.env` and adjust paths if needed. The default configuration uses `config/services.example.yaml` and stores deploy history in `data/deploy-log.jsonl`.
+## About BlackRoad OS
 
-### Development server
-```bash
-npm run dev
-```
+BlackRoad OS is a sovereign computing platform that runs AI locally on your own hardware. No cloud dependencies. No API keys. No surveillance. Built by [BlackRoad OS, Inc.](https://github.com/BlackRoad-OS-Inc), a Delaware C-Corp founded in 2025.
 
-### Tests & validation
-```bash
-npm test
-npm run lint
-npm run validate:sig
-```
+### Key Features
+- **Local AI** — Run LLMs on Raspberry Pi, Hailo-8, and commodity hardware
+- **Mesh Networking** — WireGuard VPN, NATS pub/sub, peer-to-peer communication
+- **Edge Computing** — 52 TOPS of AI acceleration across a Pi fleet
+- **Self-Hosted Everything** — Git, DNS, storage, CI/CD, chat — all sovereign
+- **Zero Cloud Dependencies** — Your data stays on your hardware
 
-### Example curls
-```bash
-curl http://localhost:8080/health
-curl http://localhost:8080/beacon
-curl "http://localhost:8080/deploys?service=blackroad-os-web&limit=5"
-```
+### The BlackRoad Ecosystem
+| Organization | Focus |
+|---|---|
+| [BlackRoad OS](https://github.com/BlackRoad-OS) | Core platform and applications |
+| [BlackRoad OS, Inc.](https://github.com/BlackRoad-OS-Inc) | Corporate and enterprise |
+| [BlackRoad AI](https://github.com/BlackRoad-AI) | Artificial intelligence and ML |
+| [BlackRoad Hardware](https://github.com/BlackRoad-Hardware) | Edge hardware and IoT |
+| [BlackRoad Security](https://github.com/BlackRoad-Security) | Cybersecurity and auditing |
+| [BlackRoad Quantum](https://github.com/BlackRoad-Quantum) | Quantum computing research |
+| [BlackRoad Agents](https://github.com/BlackRoad-Agents) | Autonomous AI agents |
+| [BlackRoad Network](https://github.com/BlackRoad-Network) | Mesh and distributed networking |
+| [BlackRoad Education](https://github.com/BlackRoad-Education) | Learning and tutoring platforms |
+| [BlackRoad Labs](https://github.com/BlackRoad-Labs) | Research and experiments |
+| [BlackRoad Cloud](https://github.com/BlackRoad-Cloud) | Self-hosted cloud infrastructure |
+| [BlackRoad Forge](https://github.com/BlackRoad-Forge) | Developer tools and utilities |
 
-## HTTP Endpoints
-- `GET /health` – self health for beacon
-- `GET /services` – list configured services
-- `GET /beacon` – aggregated beacons for all services
-- `GET /deploys` – query deploy history (`service`, `env`, `limit` optional)
-- `POST /deploys` – append deploy record (must satisfy `schemas/sig.deploy-log.spec.json`)
-
-## Relationships
-- **blackroad-os-infra**: source of SIG schemas copied into `/schemas`
-- **blackroad-os-web**: can visualize beacons for dashboards
-- **blackroad-os-operator**: can append deploy records and trigger checks
-
-## Service layout
-- `/src` application code (Express)
-- `/schemas` SIG specs for validation
-- `/config` example service registry
-- `/scripts` validation helpers
-- `/tests` Vitest coverage for logic and HTTP routes
-
-For a conceptual overview, see [`docs/BEACON_OVERVIEW.md`](docs/BEACON_OVERVIEW.md).
+### Links
+- **Website**: [blackroad.io](https://blackroad.io)
+- **Documentation**: [docs.blackroad.io](https://docs.blackroad.io)
+- **Chat**: [chat.blackroad.io](https://chat.blackroad.io)
+- **Search**: [search.blackroad.io](https://search.blackroad.io)
 
 ---
 
-**Proprietary Software — BlackRoad OS, Inc.**
 
-This software is proprietary to BlackRoad OS, Inc. Source code is publicly visible for transparency and collaboration. Commercial use, forking, and redistribution are prohibited without written authorization.
-
-**BlackRoad OS — Pave Tomorrow.**
-
-*Copyright 2024-2026 BlackRoad OS, Inc. All Rights Reserved.*
